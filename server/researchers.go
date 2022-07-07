@@ -25,12 +25,12 @@ type IncidentData struct {
 	Status string `json:"status"` // возможные статусы: active и closed
 }
 
-func fetchIncedents() []IncidentData {
+func fetchIncedents() ([]IncidentData, error) {
 	result := []IncidentData{}
 
 	resp, err := http.Get("http://localhost:8383/accendent")
 	if err != nil {
-		return result
+		return result, err
 	}
 	defer resp.Body.Close()
 
@@ -40,12 +40,15 @@ func fetchIncedents() []IncidentData {
 	if resp.StatusCode == 200 {
 		b, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return result
+			return result, err
 		}
-		json.Unmarshal(b, &result)
+		err = json.Unmarshal(b, &result)
+		if err != nil {
+			return result, err
+		}
 	}
 
-	return result
+	return result, nil
 }
 
 type SupportData struct {
@@ -69,7 +72,10 @@ func fetchSupport() ([]SupportData, error) {
 		if err != nil {
 			return data, err
 		}
-		json.Unmarshal(b, &data)
+		err = json.Unmarshal(b, &data)
+		if err != nil {
+			return data, err
+		}
 	}
 
 	return data, nil
@@ -112,9 +118,9 @@ func billingParse(b []byte) BillingData {
 }
 
 type EmailData struct {
-	Country      string
-	Provider     string
-	DeliveryTime int
+	Country      string `json:"country"`
+	Provider     string `json:"provider"`
+	DeliveryTime int    `json:"delivery_time"`
 }
 
 func fetchEmails() ([]EmailData, error) {
@@ -179,14 +185,14 @@ func emailValidate(data []byte) []EmailData {
 }
 
 type VoiceCallData struct {
-	Country             string
-	Bandwidth           string
-	ResponseTime        string
-	Provider            string
-	ConnectionStability float32
-	TTFB                int
-	VoicePurity         int
-	MedianOfCallsTime   int
+	Country             string  `json:"country"`
+	Bandwidth           string  `json:"bandwidth"`
+	ResponseTime        string  `json:"response_time"`
+	Provider            string  `json:"provider"`
+	ConnectionStability float32 `json:"connection_stability"`
+	TTFB                int     `json:"ttfb"`
+	VoicePurity         int     `json:"voice_purity"`
+	MedianOfCallTime    int     `json:"median_of_call_time"`
 }
 
 func fetchVoice() ([]VoiceCallData, error) {
@@ -215,7 +221,7 @@ func voiceValidate(data []byte) []VoiceCallData {
 			continue
 		}
 
-		country, ok := countryCodes[cols[0]]
+		_, ok := countryCodes[cols[0]]
 		if !ok {
 			continue
 		}
@@ -242,7 +248,7 @@ func voiceValidate(data []byte) []VoiceCallData {
 		}
 
 		d := VoiceCallData{
-			country,
+			cols[0],
 			cols[1],
 			cols[2],
 			cols[3],
@@ -298,15 +304,14 @@ func fetchMMS() ([]MMSData, error) {
 		}
 	}
 
-	fmt.Println(validData)
 	return validData, nil
 }
 
 type SMSData struct {
-	Country      string
-	Bandwidth    string
-	ResponseTime string
-	Provider     string
+	Country      string `json:"country"`
+	Bandwidth    string `json:"bandwidth"`
+	ResponseTime string `json:"response_time"`
+	Provider     string `json:"provider"`
 }
 
 func fetchSMS() ([]SMSData, error) {

@@ -13,17 +13,20 @@ type ResultT struct {
 }
 
 type ResultSetT struct {
-	SMS       [][]SMSData              `json:"sms"`
-	MMS       [][]MMSData              `json:"mms"`
-	VoiceCall []VoiceCallData          `json:"voice_call"`
-	Email     map[string][][]EmailData `json:"email"`
-	Billing   BillingData              `json:"billing"`
-	Support   []int                    `json:"support"`
-	Incidents []IncidentData           `json:"incident"`
+	SMS       [][]SMSData     `json:"sms"`
+	MMS       [][]MMSData     `json:"mms"`
+	VoiceCall []VoiceCallData `json:"voice_call"`
+	Email     [][]EmailData   `json:"email"`
+	Billing   BillingData     `json:"billing"`
+	Support   []int           `json:"support"`
+	Incidents []IncidentData  `json:"incident"`
 }
 
 func getResultHandler() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
 		res := ResultT{}
 		d, err := getResultData()
 		if err != nil {
@@ -33,10 +36,11 @@ func getResultHandler() func(w http.ResponseWriter, r *http.Request) {
 		}
 		if d.SMS != nil && d.MMS != nil && d.VoiceCall != nil && d.Email != nil && d.Support != nil && d.Incidents != nil {
 			res.Status = true
+			res.Data = d
 		} else {
 			res.Error = "Error on collect data"
 		}
-		res.Data = d
+
 		json.NewEncoder(w).Encode(res)
 	}
 }
@@ -81,15 +85,102 @@ func getResultData() (ResultSetT, error) {
 	}
 	res.VoiceCall = voiceCall
 
-	//emails, err := fetchEmails()
-	//if err != nil {
-	//	return res, err
-	//}
-	//var emailsRes map[string][]EmailData
-	//for _, v := range emails {
-	//	if emailsRes[v.Country]
-	//}
-	//fmt.Println(emails)
+	emails, err := fetchEmails()
+	if err != nil {
+		return res, err
+	}
+
+	emailsRes := map[string][][]EmailData{}
+	for _, email := range emails {
+		if email.DeliveryTime == 0 {
+			continue
+		}
+
+		country := email.Country
+		if _, ok := emailsRes[country]; !ok {
+			emailsRes[country] = make([][]EmailData, 2)
+		}
+
+		if len(emailsRes[country][0]) < 3 {
+			emailsRes[country][0] = append(emailsRes[country][0], email)
+			if len(emailsRes[country][0]) == 3 {
+				sort.Slice(emailsRes[country][0], func(i, j int) bool {
+					return emailsRes[country][0][i].DeliveryTime < emailsRes[country][0][j].DeliveryTime
+				})
+			}
+		} else {
+			placeToInsert := len(emailsRes[country][0])
+			for i := range emailsRes[country][0] {
+				if emailsRes[country][0][i].DeliveryTime > email.DeliveryTime {
+					placeToInsert = i
+					break
+				}
+			}
+
+			var e1, e2 EmailData
+			e2 = email
+			for i := placeToInsert; i < len(emailsRes[country][0]); i++ {
+				e1 = emailsRes[country][0][i]
+				emailsRes[country][0][i] = e2
+				e2 = e1
+			}
+		}
+
+		if len(emailsRes[country][1]) < 3 {
+			emailsRes[country][1] = append(emailsRes[country][1], email)
+			if len(emailsRes[country][1]) == 3 {
+				sort.Slice(emailsRes[country][1], func(i, j int) bool {
+					return emailsRes[country][1][i].DeliveryTime > emailsRes[country][1][j].DeliveryTime
+				})
+			}
+		} else {
+			placeToInsert := len(emailsRes[country][1])
+			for i := range emailsRes[country][1] {
+				if emailsRes[country][1][i].DeliveryTime < email.DeliveryTime {
+					placeToInsert = i
+					break
+				}
+			}
+
+			var e EmailData
+			for i := placeToInsert; i < len(emailsRes[country][1]); i++ {
+				e = emailsRes[country][1][i]
+				emailsRes[country][1][i] = email
+				email = e
+			}
+		}
+	}
+	res.Email = emailsRes["Russian Federation"]
+
+	res.Billing, err = fetchBillings()
+	if err != nil {
+		return res, err
+	}
+
+	supports, err := fetchSupport()
+	if err != nil {
+		return res, err
+	}
+	var sum int
+	for _, s := range supports {
+		sum += s.ActiveTickets
+	}
+	if sum < 9 {
+		res.Support = []int{1}
+	} else if sum >= 9 && sum <= 16 {
+		res.Support = []int{2}
+	} else if sum > 16 {
+		res.Support = []int{3}
+	}
+	res.Support = append(res.Support, sum*60/18)
+
+	res.Incidents, err = fetchIncedents()
+	if err != nil {
+		return res, err
+	}
+	sort.Slice(res.Incidents, func(i, j int) bool {
+		return res.Incidents[i].Status < res.Incidents[j].Status
+	})
 
 	return res, nil
 }
