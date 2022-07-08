@@ -1,5 +1,9 @@
-module skbx-diplom
+module github.com/heroku/go-getting-started
 
-go 1.18
+// +heroku goVersion go1.17
+go 1.17
 
-require github.com/gorilla/mux v1.8.0 // indirect
+require (
+	github.com/gorilla/mux v1.8.0
+	github.com/heroku/x v0.0.33
+)

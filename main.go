@@ -1,9 +1,20 @@
 package main
 
 import (
-	"skbx-diplom/server"
+	"log"
+	"os"
+
+	"github.com/heroku/go-getting-started/server"
+	_ "github.com/heroku/x/hmetrics/onload"
 )
 
 func main() {
-	server.Start("127.0.0.1:8000")
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		log.Fatal("$PORT must be set")
+	}
+
+	server.Start(":" + port)
+	//server.Start(":" + "8000")
 }
