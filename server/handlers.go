@@ -47,50 +47,81 @@ func getResultHandler() func(w http.ResponseWriter, r *http.Request) {
 
 func getResultData() (ResultSetT, error) {
 	res := ResultSetT{}
-	sms, err := fetchSMS()
+	var err error
+
+	res.SMS, err = getSMS()
 	if err != nil {
 		return res, err
 	}
-	sort.Slice(sms, func(i, j int) bool {
-		return sms[i].Provider < sms[j].Provider
-	})
-	res.SMS = append(res.SMS, sms)
 
-	sms1 := make([]SMSData, len(sms))
-	copy(sms1, sms)
-	sort.Slice(sms1, func(i, j int) bool {
-		return sms1[i].Country < sms1[j].Country
-	})
-	res.SMS = append(res.SMS, sms1)
-
-	mms, err := fetchMMS()
+	res.MMS, err = getMMS()
 	if err != nil {
 		return res, err
 	}
-	sort.Slice(mms, func(i, j int) bool {
-		return mms[i].Provider < mms[j].Provider
-	})
-	res.MMS = append(res.MMS, mms)
 
-	mms1 := make([]MMSData, len(mms))
-	copy(mms1, mms)
-	sort.Slice(mms1, func(i, j int) bool {
-		return mms1[i].Country < mms1[j].Country
-	})
-	res.MMS = append(res.MMS, mms1)
-
-	voiceCall, err := fetchVoice()
+	res.VoiceCall, err = fetchVoice()
 	if err != nil {
 		return res, err
 	}
-	res.VoiceCall = voiceCall
+
+	emails := map[string][][]EmailData{}
+	emails, err = getEmails()
+	if err != nil {
+		return res, err
+	}
+	res.Email = emails["Russian Federation"]
+
+	res.Billing, err = fetchBillings()
+	if err != nil {
+		return res, err
+	}
+
+	res.Support, err = getSupports()
+	if err != nil {
+		return res, err
+	}
+
+	res.Incidents, err = fetchIncedents()
+	if err != nil {
+		return res, err
+	}
+	sort.Slice(res.Incidents, func(i, j int) bool {
+		return res.Incidents[i].Status < res.Incidents[j].Status
+	})
+
+	return res, nil
+}
+
+func getSupports() ([]int, error) {
+	res := []int{}
+	supports, err := fetchSupport()
+	if err != nil {
+		return res, err
+	}
+	var sum int
+	for _, s := range supports {
+		sum += s.ActiveTickets
+	}
+	if sum < 9 {
+		res = []int{1}
+	} else if sum >= 9 && sum <= 16 {
+		res = []int{2}
+	} else if sum > 16 {
+		res = []int{3}
+	}
+	res = append(res, sum*60/18)
+
+	return res, nil
+}
+
+func getEmails() (map[string][][]EmailData, error) {
+	emailsRes := map[string][][]EmailData{}
 
 	emails, err := fetchEmails()
 	if err != nil {
-		return res, err
+		return emailsRes, err
 	}
 
-	emailsRes := map[string][][]EmailData{}
 	for _, email := range emails {
 		if email.DeliveryTime == 0 {
 			continue
@@ -150,37 +181,50 @@ func getResultData() (ResultSetT, error) {
 			}
 		}
 	}
-	res.Email = emailsRes["Russian Federation"]
 
-	res.Billing, err = fetchBillings()
+	return emailsRes, nil
+}
+
+func getSMS() ([][]SMSData, error) {
+	res := make([][]SMSData, 0)
+	sms, err := fetchSMS()
 	if err != nil {
 		return res, err
 	}
 
-	supports, err := fetchSupport()
-	if err != nil {
-		return res, err
-	}
-	var sum int
-	for _, s := range supports {
-		sum += s.ActiveTickets
-	}
-	if sum < 9 {
-		res.Support = []int{1}
-	} else if sum >= 9 && sum <= 16 {
-		res.Support = []int{2}
-	} else if sum > 16 {
-		res.Support = []int{3}
-	}
-	res.Support = append(res.Support, sum*60/18)
-
-	res.Incidents, err = fetchIncedents()
-	if err != nil {
-		return res, err
-	}
-	sort.Slice(res.Incidents, func(i, j int) bool {
-		return res.Incidents[i].Status < res.Incidents[j].Status
+	sort.Slice(sms, func(i, j int) bool {
+		return sms[i].Provider < sms[j].Provider
 	})
+	res = append(res, sms)
+
+	sms1 := make([]SMSData, len(sms))
+	copy(sms1, sms)
+	sort.Slice(sms1, func(i, j int) bool {
+		return sms1[i].Country < sms1[j].Country
+	})
+	res = append(res, sms1)
+
+	return res, nil
+}
+
+func getMMS() ([][]MMSData, error) {
+	res := make([][]MMSData, 0)
+	mms, err := fetchMMS()
+	if err != nil {
+		return res, err
+	}
+
+	sort.Slice(mms, func(i, j int) bool {
+		return mms[i].Provider < mms[j].Provider
+	})
+	res = append(res, mms)
+
+	mms1 := make([]MMSData, len(mms))
+	copy(mms1, mms)
+	sort.Slice(mms1, func(i, j int) bool {
+		return mms1[i].Country < mms1[j].Country
+	})
+	res = append(res, mms1)
 
 	return res, nil
 }

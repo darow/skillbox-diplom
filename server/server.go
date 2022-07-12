@@ -3,8 +3,7 @@ package server
 import (
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -17,25 +16,9 @@ type spaHandler struct {
 }
 
 func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path, err := filepath.Abs(r.URL.Path)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	path = filepath.Join(h.staticPath, path)
-
-	_, err = os.Stat(path)
-	if os.IsNotExist(err) {
-		http.ServeFile(w, r, filepath.Join(h.staticPath, h.indexPath))
-		return
-	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// otherwise, use http.FileServer to serve the static dir
-	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
+	path := strings.Trim(r.URL.Path, "\\/")
+	path = "./" + h.staticPath + "/" + path
+	http.ServeFile(w, r, path)
 }
 
 func Start(addr string) {
@@ -45,13 +28,8 @@ func Start(addr string) {
 		go simulator.Start()
 	})
 
-	router.HandleFunc("/", serveFiles)
-	router.HandleFunc("/status_page.html", serveFiles)
-	router.HandleFunc("/chart.min.js", serveFiles)
-	router.HandleFunc("/main.js", serveFiles)
-	router.HandleFunc("/main.css", serveFiles)
-	router.HandleFunc("/static/true.png", serveFiles)
-	router.HandleFunc("/static/false.png", serveFiles)
+	spa := spaHandler{staticPath: "front", indexPath: "status_page.html"}
+	router.PathPrefix("/").Handler(spa)
 
 	srv := &http.Server{
 		Handler:      router,
@@ -61,12 +39,4 @@ func Start(addr string) {
 	}
 
 	log.Fatal(srv.ListenAndServe())
-}
-
-func serveFiles(w http.ResponseWriter, r *http.Request) {
-	p := "./front" + r.URL.Path
-	if p == "./front/" {
-		p = "./front/status_page.html"
-	}
-	http.ServeFile(w, r, p)
 }
