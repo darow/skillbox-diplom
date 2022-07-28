@@ -19,3 +19,4 @@ WORKDIR /app
 RUN useradd -m heroku
 USER heroku
 CMD /app/bin/go-getting-started
+RUN ./simulator

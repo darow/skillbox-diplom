@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/heroku/go-getting-started/simulator"
 )
 
 type spaHandler struct {
@@ -24,9 +23,10 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func Start(addr string) {
 	router := mux.NewRouter()
 	router.HandleFunc("/api", getResultHandler())
-	router.HandleFunc("/simulator_switch_on", func(w http.ResponseWriter, r *http.Request) {
-		go simulator.Start()
-	})
+	//router.HandleFunc("/simulator_switch_on", func(w http.ResponseWriter, r *http.Request) {
+	//	w.Write([]byte("Симулятор запущен"))
+	//	go simulator.Start()
+	//})
 
 	spa := spaHandler{staticPath: "front", indexPath: "status_page.html"}
 	router.PathPrefix("/").Handler(spa)

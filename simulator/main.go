@@ -1,4 +1,4 @@
-package simulator
+package main
 
 import (
 	"encoding/json"
@@ -108,7 +108,7 @@ func init() {
 	fmt.Printf("Second Email row for currupt %d\n", secondEmailRowForCorrupt+1)
 }
 
-func Start() {
+func main() {
 	shuffleSmsData()
 
 	MMSCollection = shuffleMMSData()
@@ -438,7 +438,7 @@ func listenAndServeHTTP() {
 	router.HandleFunc("/accendent", handleAccendent)
 	router.HandleFunc("/test", handleTest).Methods("GET", "OPTIONS")
 
-	if err := http.ListenAndServe("127.0.0.1:8383", router); err != nil {
+	if err := http.ListenAndServe(":8383", router); err != nil {
 		log.Println(err)
 	}
 }
