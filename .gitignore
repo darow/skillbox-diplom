@@ -1,6 +1,5 @@
 .idea
 
-*.data
 .env
 .docker_build/
 bin/
