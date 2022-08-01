@@ -1,17 +1,23 @@
 package main
 
 import (
+	"log"
+	"os"
+
 	"github.com/heroku/go-getting-started/server"
+	"github.com/heroku/go-getting-started/simulator"
 	_ "github.com/heroku/x/hmetrics/onload"
 )
 
 func main() {
-	// port := os.Getenv("PORT")
+	go simulator.Start()
 
-	// if port == "" {
-	// 	log.Fatal("$PORT must be set")
-	// }
+	port := os.Getenv("PORT")
 
-	// server.Start(":" + port)
-	server.Start(":" + "8000")
+	if port == "" {
+		log.Fatal("$PORT must be set")
+	}
+
+	server.Start(":" + port)
+	// server.Start(":" + "8000")
 }
