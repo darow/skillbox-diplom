@@ -2,8 +2,12 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"sort"
+	"sync"
+	"time"
 )
 
 type ResultT struct {
@@ -13,6 +17,7 @@ type ResultT struct {
 }
 
 type ResultSetT struct {
+	sync.RWMutex
 	SMS       [][]SMSData     `json:"sms"`
 	MMS       [][]MMSData     `json:"mms"`
 	VoiceCall []VoiceCallData `json:"voice_call"`
@@ -22,74 +27,158 @@ type ResultSetT struct {
 	Incidents []IncidentData  `json:"incident"`
 }
 
+var cachedResultSetT *ResultSetT
+
 func getResultHandler() func(w http.ResponseWriter, r *http.Request) {
+	refreshData()
+	go refresher(time.NewTicker(30 * time.Second))
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
+		defer func(start time.Time) {
+			fmt.Printf("сбор информации занял %s\n", time.Since(start))
+		}(time.Now())
+
 		res := ResultT{}
-		d, err := getResultData()
+		d, err := getResultDataFromCache()
 		if err != nil {
 			res.Error = "Error on collect data" + err.Error()
 			json.NewEncoder(w).Encode(res)
 			return
 		}
-		if d.SMS != nil && d.MMS != nil && d.VoiceCall != nil && d.Email != nil && d.Support != nil && d.Incidents != nil {
-			res.Status = true
-			res.Data = d
-		} else {
-			res.Error = "Error on collect data"
-		}
+
+		res.Status = true
+		res.Data = d
 
 		json.NewEncoder(w).Encode(res)
 	}
 }
 
+func refresher(ticker *time.Ticker) {
+	for range ticker.C {
+		fmt.Println("refreshing cache")
+		refreshData()
+	}
+}
+
+func refreshData() {
+	res, err := getResultData()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	cachedResultSetT = &res
+}
+
+func getResultDataFromCache() (ResultSetT, error) {
+	cachedResultSetT.RLock()
+	c := *cachedResultSetT
+	cachedResultSetT.RUnlock()
+
+	if c.SMS != nil && c.MMS != nil && c.VoiceCall != nil && c.Email != nil && c.Support != nil && c.Incidents != nil {
+		return c, nil
+	}
+
+	return c, errors.New("field is empty")
+}
+
 func getResultData() (ResultSetT, error) {
+	errChan := make(chan error)
+	doneChan := make(chan struct{})
+
+	smsChan := make(chan *[][]SMSData)
+	mmsChan := make(chan *[][]MMSData)
+	voiceCallChan := make(chan *[]VoiceCallData)
+	emailChan := make(chan *[][]EmailData)
+	billingsChan := make(chan *BillingData)
+	supportChan := make(chan *[]int)
+	incidentChan := make(chan *[]IncidentData)
+
+	go func() {
+		sms, err := getSMS()
+		if err != nil {
+			errChan <- err
+		}
+		smsChan <- &sms
+	}()
+
+	go func() {
+		mms, err := getMMS()
+		if err != nil {
+			errChan <- err
+		}
+		mmsChan <- &mms
+	}()
+
+	go func() {
+		voiceCall, err := fetchVoice()
+		if err != nil {
+			errChan <- err
+		}
+		voiceCallChan <- &voiceCall
+	}()
+
+	go func() {
+		emails, err := getEmails()
+		if err != nil {
+			errChan <- err
+		}
+		res := emails["Russian Federation"]
+
+		emailChan <- &res
+	}()
+
+	go func() {
+		billings, err := fetchBillings()
+		if err != nil {
+			errChan <- err
+		}
+
+		billingsChan <- &billings
+	}()
+
+	go func() {
+		support, err := getSupports()
+		if err != nil {
+			errChan <- err
+		}
+
+		supportChan <- &support
+	}()
+
+	go func() {
+		incidents, err := fetchIncedents()
+		if err != nil {
+			errChan <- err
+		}
+		sort.Slice(incidents, func(i, j int) bool {
+			return incidents[i].Status < incidents[j].Status
+		})
+
+		incidentChan <- &incidents
+	}()
+
 	res := ResultSetT{}
-	var err error
+	go func() {
+		res.SMS = *<-smsChan
+		res.MMS = *<-mmsChan
+		res.VoiceCall = *<-voiceCallChan
+		res.Email = *<-emailChan
+		res.Billing = *<-billingsChan
+		res.Support = *<-supportChan
+		res.Incidents = *<-incidentChan
 
-	res.SMS, err = getSMS()
-	if err != nil {
+		doneChan <- struct{}{}
+	}()
+
+	select {
+	case err := <-errChan:
 		return res, err
+	case <-doneChan:
+		return res, nil
 	}
-
-	res.MMS, err = getMMS()
-	if err != nil {
-		return res, err
-	}
-
-	res.VoiceCall, err = fetchVoice()
-	if err != nil {
-		return res, err
-	}
-
-	emails := map[string][][]EmailData{}
-	emails, err = getEmails()
-	if err != nil {
-		return res, err
-	}
-	res.Email = emails["Russian Federation"]
-
-	res.Billing, err = fetchBillings()
-	if err != nil {
-		return res, err
-	}
-
-	res.Support, err = getSupports()
-	if err != nil {
-		return res, err
-	}
-
-	res.Incidents, err = fetchIncedents()
-	if err != nil {
-		return res, err
-	}
-	sort.Slice(res.Incidents, func(i, j int) bool {
-		return res.Incidents[i].Status < res.Incidents[j].Status
-	})
-
-	return res, nil
 }
 
 func getSupports() ([]int, error) {

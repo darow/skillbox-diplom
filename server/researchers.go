@@ -180,7 +180,7 @@ func emailValidate(data []byte) []EmailData {
 		}
 		res = append(res, d)
 	}
-	fmt.Println("emailValidate fails count:", len(rows)-len(res)-1)
+	//fmt.Println("emailValidate fails count:", len(rows)-len(res)-1)
 	return res
 }
 
@@ -259,7 +259,7 @@ func voiceValidate(data []byte) []VoiceCallData {
 		}
 		res = append(res, d)
 	}
-	fmt.Println("voiceValidate fails count:", len(rows)-len(res)-1)
+	//fmt.Println("voiceValidate fails count:", len(rows)-len(res)-1)
 	return res
 }
 
@@ -357,6 +357,6 @@ func smsValidate(data []byte) []SMSData {
 		}
 		res = append(res, d)
 	}
-	fmt.Println("smsValidate fails count:", len(rows)-len(res)-1)
+	//fmt.Println("smsValidate fails count:", len(rows)-len(res)-1)
 	return res
 }
