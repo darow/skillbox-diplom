@@ -17,7 +17,6 @@ type ResultT struct {
 }
 
 type ResultSetT struct {
-	sync.RWMutex
 	SMS       [][]SMSData     `json:"sms"`
 	MMS       [][]MMSData     `json:"mms"`
 	VoiceCall []VoiceCallData `json:"voice_call"`
@@ -27,7 +26,12 @@ type ResultSetT struct {
 	Incidents []IncidentData  `json:"incident"`
 }
 
-var cachedResultSetT *ResultSetT
+type safeResultSetT struct {
+	sync.RWMutex
+	data *ResultSetT
+}
+
+var cachedResultSetT = &safeResultSetT{}
 
 func getResultHandler() func(w http.ResponseWriter, r *http.Request) {
 	refreshData()
@@ -69,12 +73,14 @@ func refreshData() {
 		fmt.Println(err)
 	}
 
-	cachedResultSetT = &res
+	cachedResultSetT.Lock()
+	cachedResultSetT.data = &res
+	cachedResultSetT.Unlock()
 }
 
 func getResultDataFromCache() (ResultSetT, error) {
 	cachedResultSetT.RLock()
-	c := *cachedResultSetT
+	c := *cachedResultSetT.data
 	cachedResultSetT.RUnlock()
 
 	if c.SMS != nil && c.MMS != nil && c.VoiceCall != nil && c.Email != nil && c.Support != nil && c.Incidents != nil {
