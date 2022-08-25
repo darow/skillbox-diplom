@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/heroku/go-getting-started/server"
-	"github.com/heroku/go-getting-started/simulator"
+	"github.com/heroku/go-getting-started/internal/server"
+	"github.com/heroku/go-getting-started/third_party/simulator"
 	_ "github.com/heroku/x/hmetrics/onload"
 )
 

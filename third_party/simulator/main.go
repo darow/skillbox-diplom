@@ -43,6 +43,7 @@ const billingFilename = "billing.data"
 const supportApiUrl = "http://localhost:8484/support"
 const accendentListFilename = "accendents.data"
 
+var ReadyState bool
 var firstSMSRowForCorrupt int
 var secondSMSRowForCorrupt int
 
@@ -120,6 +121,7 @@ func Start() {
 	SupportCollection = shuffleSupportData()
 	AccendentCollection = shuffleAccendentData()
 
+	ReadyState = true
 	listenAndServeHTTP()
 }
 
