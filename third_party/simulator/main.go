@@ -1,4 +1,4 @@
-package simulator
+package main
 
 import (
 	"encoding/json"
@@ -109,7 +109,7 @@ func init() {
 	fmt.Printf("Second Email row for currupt %d\n", secondEmailRowForCorrupt+1)
 }
 
-func Start() {
+func main() {
 	shuffleSmsData()
 
 	MMSCollection = shuffleMMSData()

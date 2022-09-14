@@ -11,9 +11,9 @@ import (
 )
 
 type ResultT struct {
-	Status bool       `json:"status"` // true, если все этапы сбора
-	Data   ResultSetT `json:"data"`   // заполнен, если все этапы сбора
-	Error  string     `json:"error"`  // пустая строка если все этапы
+	Status bool       `json:"status"`
+	Data   ResultSetT `json:"data"`
+	Error  string     `json:"error"`
 }
 
 type ResultSetT struct {
@@ -34,7 +34,11 @@ type safeResultSetT struct {
 var cachedResultSetT = &safeResultSetT{}
 
 func getResultHandler() func(w http.ResponseWriter, r *http.Request) {
-	refreshData()
+	err := refreshData()
+	for err != nil {
+		err = refreshData()
+	}
+
 	go refresher(time.NewTicker(30 * time.Second))
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -67,15 +71,17 @@ func refresher(ticker *time.Ticker) {
 	}
 }
 
-func refreshData() {
+func refreshData() error {
 	res, err := getResultData()
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 
 	cachedResultSetT.Lock()
 	cachedResultSetT.data = &res
 	cachedResultSetT.Unlock()
+
+	return nil
 }
 
 func getResultDataFromCache() (ResultSetT, error) {

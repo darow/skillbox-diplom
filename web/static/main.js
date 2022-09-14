@@ -1,6 +1,6 @@
 (function(){
     let apiPath1 = 'http://127.0.0.1:8383/test';
-    let apiPath = "http://127.0.0.1:8000/api";
+    let apiPath = "http://localhost:8000/api";
     let apiPath2 = "https://skillbox-diplom1.herokuapp.com/api";
 
     //let apiPath = 'response/error.json';

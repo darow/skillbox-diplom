@@ -1,14 +1,8 @@
 package main
 
-import (
-	"github.com/heroku/go-getting-started/internal/server"
-	"github.com/heroku/go-getting-started/third_party/simulator"
-	_ "github.com/heroku/x/hmetrics/onload"
-)
+import "github.com/heroku/go-getting-started/internal/server"
 
 func main() {
-	go simulator.Start()
-
 	//port := os.Getenv("PORT")
 	//
 	//if port == "" {
