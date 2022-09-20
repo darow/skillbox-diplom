@@ -135,43 +135,52 @@
         renderTableData(table, data, dataScheme.incident);
     };
 
-    let renderEmailCharts = function(data){
+    let renderEmailCharts = function(countries){
         let container = document.querySelector('.charts');
 
-        console.log(data);
+        console.log(countries);
+        Object.entries(countries).forEach((country)=>{
+            console.log(country);
 
-        data.forEach((item) => {
-            let labels = [];
-            let values = [];
-            item.forEach((sector) => {
-                labels.push(sector.provider + " (" + sector.country + ")");
-                values.push(sector.delivery_time);
-            });
+            let countryElem = document.createElement('country');
+            let countryLabel = document.createElement('country-canvases-label')
+            countryLabel.innerHTML = country[0]
+            countryElem.appendChild(countryLabel)
 
-            let canvas = document.createElement('canvas');
-            let ctx = canvas.getContext('2d');
-            let chart = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    'labels': labels,
-                    'datasets': [
-                        {
-                            'label': 'Dataset 1',
-                            'data': values,
-                            'backgroundColor': pieColors
-                        }
-                    ]
-                },
-                options: {
-                    responsive: false,
-                    plugins: {
-                        legend: {
-                            position: 'top'
+            country[1].forEach((item) => {
+                let labels = [];
+                let values = [];
+                item.forEach((sector) => {
+                    labels.push(sector.provider + " (" + sector.country + ")");
+                    values.push(sector.delivery_time);
+                });
+
+                let canvas = document.createElement('canvas');
+                let ctx = canvas.getContext('2d');
+                let chart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        'labels': labels,
+                        'datasets': [
+                            {
+                                'label': 'Dataset 1',
+                                'data': values,
+                                'backgroundColor': pieColors
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            }
                         }
                     }
-                }
+                });
+                countryElem.appendChild(canvas)
             });
-            container.appendChild(canvas);
+            container.appendChild(countryElem);
         });
     };
 

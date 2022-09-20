@@ -17,13 +17,13 @@ type ResultT struct {
 }
 
 type ResultSetT struct {
-	SMS       [][]SMSData     `json:"sms"`
-	MMS       [][]MMSData     `json:"mms"`
-	VoiceCall []VoiceCallData `json:"voice_call"`
-	Email     [][]EmailData   `json:"email"`
-	Billing   BillingData     `json:"billing"`
-	Support   []int           `json:"support"`
-	Incidents []IncidentData  `json:"incident"`
+	SMS       [][]SMSData              `json:"sms"`
+	MMS       [][]MMSData              `json:"mms"`
+	VoiceCall []VoiceCallData          `json:"voice_call"`
+	Email     map[string][][]EmailData `json:"email"`
+	Billing   BillingData              `json:"billing"`
+	Support   []int                    `json:"support"`
+	Incidents []IncidentData           `json:"incident"`
 }
 
 type safeResultSetT struct {
@@ -103,7 +103,7 @@ func getResultData() (ResultSetT, error) {
 	smsChan := make(chan *[][]SMSData)
 	mmsChan := make(chan *[][]MMSData)
 	voiceCallChan := make(chan *[]VoiceCallData)
-	emailChan := make(chan *[][]EmailData)
+	emailChan := make(chan *map[string][][]EmailData)
 	billingsChan := make(chan *BillingData)
 	supportChan := make(chan *[]int)
 	incidentChan := make(chan *[]IncidentData)
@@ -137,9 +137,7 @@ func getResultData() (ResultSetT, error) {
 		if err != nil {
 			errChan <- err
 		}
-		res := emails["Russian Federation"]
-
-		emailChan <- &res
+		emailChan <- &emails
 	}()
 
 	go func() {
