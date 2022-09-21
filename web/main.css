@@ -67,7 +67,7 @@ td.row-name {
 
 .true-value {
     width: 50px;
-    background-image: url('static/true.png');
+    background-image: url('true.png');
     background-repeat: no-repeat;
     background-size: 16px;
     background-position: center center;
@@ -75,21 +75,24 @@ td.row-name {
 
 .false-value {
     width: 50px;
-    background-image: url('static/false.png');
+    background-image: url('false.png');
     background-repeat: no-repeat;
     background-size: 16px;
     background-position: center center;
 }
 
 .charts {
-    display: flex;
-    justify-content: flex-start;
+    display: block;
+}
+
+.charts div{
+    display: flex; 
 }
 
 .charts canvas {
     width: 100px;
     height: 100px;
-    margin-right: 30px
+    margin-right: 30px;
 }
 
 .errors-container {

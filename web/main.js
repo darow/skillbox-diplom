@@ -1,15 +1,13 @@
 (function(){
-    let apiPath1 = 'http://127.0.0.1:8383/test';
+    // let apiPath = 'http://127.0.0.1:8383/test';
     let apiPath = "http://localhost:8000/api";
-    let apiPath2 = "https://skillbox-diplom1.herokuapp.com/api";
-
-    //let apiPath = 'response/error.json';
+    // let apiPath = "https://skillbox-diplom1.herokuapp.com/api";
 
     let dataScheme = {
         'voice_call' : [
             "country", "bandwidth", "response_time", "provider",
             "connection_stability", "ttfb", "voice_purity",
-            "median_of_call_time"
+            "median_of_calls_time"
         ],
         'sms' : ["country", "bandwidth", "response_time", "provider"],
         'mms' : ["country", "bandwidth", "response_time", "provider"],
@@ -91,7 +89,7 @@
         data.forEach(array => {
             renderTableData(table, array, scheme);
             addDelimiter(table);
-        })
+        });
     };
 
     let showSupportTime = function(data) {
@@ -106,7 +104,7 @@
         let words = text.split('_');
         for(i in words) {
             words[i] = words[i].charAt(0).toUpperCase() +
-                words[i].slice(1)
+                words[i].slice(1);
         }
         return words.join(' ');
     };
@@ -135,53 +133,50 @@
         renderTableData(table, data, dataScheme.incident);
     };
 
-    let renderEmailCharts = function(countries){
+    let renderEmailCharts = function(data){
         let container = document.querySelector('.charts');
 
-        console.log(countries);
-        Object.entries(countries).forEach((country)=>{
-            console.log(country);
+        console.log(data);
 
-            let countryElem = document.createElement('country');
-            let countryLabel = document.createElement('country-canvases-label')
-            countryLabel.innerHTML = country[0]
-            countryElem.appendChild(countryLabel)
-
-            country[1].forEach((item) => {
-                let labels = [];
-                let values = [];
-                item.forEach((sector) => {
-                    labels.push(sector.provider + " (" + sector.country + ")");
-                    values.push(sector.delivery_time);
-                });
-
-                let canvas = document.createElement('canvas');
-                let ctx = canvas.getContext('2d');
-                let chart = new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        'labels': labels,
-                        'datasets': [
-                            {
-                                'label': 'Dataset 1',
-                                'data': values,
-                                'backgroundColor': pieColors
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: false,
-                        plugins: {
-                            legend: {
-                                position: 'top'
+        Object.entries(data).forEach((country) => {
+                var p = document.createElement('h3');
+                p.innerText =`${country[0]}`
+                container.appendChild(p);
+                let div = document.createElement('div');
+                country[1].forEach((item) => {
+                    let labels = [];
+                    let values = [];
+                    item.forEach((sector) => {
+                        labels.push(sector.provider + " (" + sector.country + ")");
+                        values.push(sector.delivery_time);
+                    });
+                    let canvas = document.createElement('canvas');
+                    let ctx = canvas.getContext('2d');
+                    let chart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            'labels': labels,
+                            'datasets': [
+                                {
+                                    'label': 'Dataset 1',
+                                    'data': values,
+                                    'backgroundColor': pieColors
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top'
+                                }
                             }
                         }
-                    }
+                    });
+                    div.appendChild(canvas);
                 });
-                countryElem.appendChild(canvas)
+                container.appendChild(div);
             });
-            container.appendChild(countryElem);
-        });
     };
 
     let handleResponse = async function(response){
